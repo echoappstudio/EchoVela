@@ -2,22 +2,22 @@
 import PackageDescription
 
 let package = Package(
-    name: "Lumen",
+    name: "EchoVela",
     platforms: [.macOS(.v26)],
     products: [
-        .library(name: "LumenCore", targets: ["LumenCore"]),
-        .executable(name: "LumenApp", targets: ["LumenApp"])
+        .library(name: "EchoVelaCore", targets: ["EchoVelaCore"]),
+        .executable(name: "EchoVelaApp", targets: ["EchoVelaApp"])
     ],
     dependencies: [
         // Automatic updates. Pinned exactly; the packaged app embeds this framework.
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.10.0")
     ],
     targets: [
-        .target(name: "LumenCore"),
+        .target(name: "EchoVelaCore"),
         .executableTarget(
-            name: "LumenApp",
+            name: "EchoVelaApp",
             dependencies: [
-                "LumenCore",
+                "EchoVelaCore",
                 .product(name: "Sparkle", package: "Sparkle")
             ],
             linkerSettings: [
@@ -25,6 +25,6 @@ let package = Package(
                 .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])
             ]
         ),
-        .testTarget(name: "LumenTests", dependencies: ["LumenCore"])
+        .testTarget(name: "EchoVelaTests", dependencies: ["EchoVelaCore"])
     ]
 )

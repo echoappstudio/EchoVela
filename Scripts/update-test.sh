@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# Updates an older Lumen to a newer one through Sparkle, using a test feed on this Mac:
-#   1. with automatic checks turned off in Lumen's saved settings, Lumen doesn't check;
+# Updates an older EchoVela to a newer one through Sparkle, using a test feed on this Mac:
+#   1. with automatic checks turned off in EchoVela's saved settings, EchoVela doesn't check;
 #   2. an update whose signature doesn't match is downloaded but never installed;
-#   3. a correctly signed update is installed and Lumen relaunches as the new version,
+#   3. a correctly signed update is installed and EchoVela relaunches as the new version,
 #      with its settings kept and (for a real signing identity) the same code identity.
 # The two test copies are the packaged app with a test feed address, a throwaway signing key and
 # their own version numbers, re-signed by the same script as the release. Needs OpenSSL 3.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SOURCE_APP="$ROOT_DIR/dist/Lumen.app"
+SOURCE_APP="$ROOT_DIR/dist/EchoVela.app"
 RELEASE_TOOL=(python3 -I "$ROOT_DIR/Scripts/release/sparkle_release.py")
-DOMAIN="com.lumen.app"
+DOMAIN="com.echoapps.echovela"
 PORT=8765
 FEED_URL="http://127.0.0.1:$PORT/appcast.xml"
 SIGN_MODE="${SIGN_MODE:-adhoc}"
@@ -24,10 +24,10 @@ fi
 export SPARKLE_OPENSSL
 "$SPARKLE_OPENSSL" version | grep -q '^OpenSSL 3'
 
-WORK_DIR="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/lumen-update.XXXXXX")"
+WORK_DIR="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/echovela-update.XXXXXX")"
 FEED_DIR="$WORK_DIR/feed"
 INSTALL_DIR="$WORK_DIR/Applications"
-INSTALLED_APP="$INSTALL_DIR/Lumen.app"
+INSTALLED_APP="$INSTALL_DIR/EchoVela.app"
 SERVER_LOG="$WORK_DIR/server.log"
 mkdir -p "$FEED_DIR" "$INSTALL_DIR" "$WORK_DIR/old" "$WORK_DIR/new"
 SERVER_PID=""
@@ -35,11 +35,11 @@ SERVER_PID=""
 cleanup() {
     status=$?
     trap - EXIT
-    pkill -x Lumen >/dev/null 2>&1 || true
+    pkill -x EchoVela >/dev/null 2>&1 || true
     if [[ -n "$SERVER_PID" ]]; then
         kill "$SERVER_PID" >/dev/null 2>&1 || true
     fi
-    defaults delete "$DOMAIN" Lumen.updateTestMarker >/dev/null 2>&1 || true
+    defaults delete "$DOMAIN" EchoVela.updateTestMarker >/dev/null 2>&1 || true
     rm -rf "$WORK_DIR"
     exit "$status"
 }
@@ -70,14 +70,14 @@ make_copy() {
     bash "$ROOT_DIR/Scripts/sign-app.sh" "$destination"
 }
 
-make_copy "$WORK_DIR/old/Lumen.app" "$OLD_BUILD" "$BASE_VERSION"
-make_copy "$WORK_DIR/new/Lumen.app" "$NEW_BUILD" "$NEW_VERSION"
-OLD_REQUIREMENT="$(codesign --display --requirements - "$WORK_DIR/old/Lumen.app" 2>/dev/null | sed -n 's/^designated => //p')"
-NEW_REQUIREMENT="$(codesign --display --requirements - "$WORK_DIR/new/Lumen.app" 2>/dev/null | sed -n 's/^designated => //p')"
+make_copy "$WORK_DIR/old/EchoVela.app" "$OLD_BUILD" "$BASE_VERSION"
+make_copy "$WORK_DIR/new/EchoVela.app" "$NEW_BUILD" "$NEW_VERSION"
+OLD_REQUIREMENT="$(codesign --display --requirements - "$WORK_DIR/old/EchoVela.app" 2>/dev/null | sed -n 's/^designated => //p')"
+NEW_REQUIREMENT="$(codesign --display --requirements - "$WORK_DIR/new/EchoVela.app" 2>/dev/null | sed -n 's/^designated => //p')"
 test -n "$OLD_REQUIREMENT"
 
-ARCHIVE="$FEED_DIR/Lumen-$NEW_VERSION.zip"
-ditto -c -k --sequesterRsrc --keepParent "$WORK_DIR/new/Lumen.app" "$ARCHIVE"
+ARCHIVE="$FEED_DIR/EchoVela-$NEW_VERSION.zip"
+ditto -c -k --sequesterRsrc --keepParent "$WORK_DIR/new/EchoVela.app" "$ARCHIVE"
 GOOD_SIGNATURE="$("${RELEASE_TOOL[@]}" sign --seed-env TEST_SPARKLE_KEY "$ARCHIVE")"
 "${RELEASE_TOOL[@]}" verify --public-key "$PUBLIC_KEY" "$ARCHIVE" "$GOOD_SIGNATURE"
 printf 'not the update' > "$WORK_DIR/other.bin"
@@ -87,10 +87,10 @@ printf -- '- Test update.\n' > "$WORK_DIR/notes.md"
 write_feed() {
     local signature="$1" output="$2"
     # The feed must say https; the test copies only reach it through 127.0.0.1.
-    "${RELEASE_TOOL[@]}" feed --app-name Lumen --version "$NEW_VERSION" --build "$NEW_BUILD" \
-        --url "https://placeholder.invalid/Lumen.zip" --archive "$ARCHIVE" --signature "$signature" \
+    "${RELEASE_TOOL[@]}" feed --app-name EchoVela --version "$NEW_VERSION" --build "$NEW_BUILD" \
+        --url "https://placeholder.invalid/EchoVela.zip" --archive "$ARCHIVE" --signature "$signature" \
         --minimum-system 26.0 --notes "$WORK_DIR/notes.md" --output "$output"
-    sed -i '' "s|https://placeholder.invalid/Lumen.zip|http://127.0.0.1:$PORT/$(basename "$ARCHIVE")|" "$output"
+    sed -i '' "s|https://placeholder.invalid/EchoVela.zip|http://127.0.0.1:$PORT/$(basename "$ARCHIVE")|" "$output"
     "${RELEASE_TOOL[@]}" sign-feed --seed-env TEST_SPARKLE_KEY "$output"
     "${RELEASE_TOOL[@]}" verify-feed --public-key "$PUBLIC_KEY" "$output"
 }
@@ -129,38 +129,38 @@ archive_requests() {
 launch_installed() {
     open -n -g "$INSTALLED_APP"
     for _ in {1..20}; do
-        if pgrep -x Lumen >/dev/null 2>&1; then return 0; fi
+        if pgrep -x EchoVela >/dev/null 2>&1; then return 0; fi
         sleep 0.5
     done
-    printf 'Lumen did not start.\n' >&2
+    printf 'EchoVela did not start.\n' >&2
     return 1
 }
 
-quit_lumen() {
-    pkill -x Lumen >/dev/null 2>&1 || true
+quit_echovela() {
+    pkill -x EchoVela >/dev/null 2>&1 || true
     for _ in {1..20}; do
-        if ! pgrep -x Lumen >/dev/null 2>&1; then return 0; fi
+        if ! pgrep -x EchoVela >/dev/null 2>&1; then return 0; fi
         sleep 0.5
     done
-    pkill -9 -x Lumen >/dev/null 2>&1 || true
+    pkill -9 -x EchoVela >/dev/null 2>&1 || true
 }
 
-ditto "$WORK_DIR/old/Lumen.app" "$INSTALLED_APP"
+ditto "$WORK_DIR/old/EchoVela.app" "$INSTALLED_APP"
 MARKER="kept-$(date +%s)"
-defaults write "$DOMAIN" Lumen.updateTestMarker -string "$MARKER"
-defaults write "$DOMAIN" Lumen.hasLaunched -bool true
+defaults write "$DOMAIN" EchoVela.updateTestMarker -string "$MARKER"
+defaults write "$DOMAIN" EchoVela.hasLaunched -bool true
 defaults write "$DOMAIN" SUAutomaticallyUpdate -bool true
 # A check just happened as far as the hourly schedule knows, so only the launch check can find
 # the update quickly.
 defaults write "$DOMAIN" SULastCheckTime -date "$(date -u '+%Y-%m-%d %H:%M:%S +0000')"
 defaults delete "$DOMAIN" SUSkippedVersion >/dev/null 2>&1 || true
 
-echo "1. Automatic checks off: Lumen must not check."
+echo "1. Automatic checks off: EchoVela must not check."
 cp "$WORK_DIR/appcast-good.xml" "$FEED_DIR/appcast.xml"
 defaults write "$DOMAIN" SUEnableAutomaticChecks -bool false
 launch_installed
 sleep 20
-quit_lumen
+quit_echovela
 test "$(feed_requests)" -eq 0
 test "$(installed_build)" = "$OLD_BUILD"
 echo "   No check was made."
@@ -177,20 +177,20 @@ test "$(feed_requests)" -ge 1
 test "$(archive_requests)" -ge 1
 sleep 20
 test "$(installed_build)" = "$OLD_BUILD"
-quit_lumen
+quit_echovela
 test "$(installed_build)" = "$OLD_BUILD"
 echo "   The update was downloaded and refused."
 
-echo "3. A signed update installs and Lumen relaunches."
+echo "3. A signed update installs and EchoVela relaunches."
 cp "$WORK_DIR/appcast-good.xml" "$FEED_DIR/appcast.xml"
 defaults write "$DOMAIN" SULastCheckTime -date "$(date -u '+%Y-%m-%d %H:%M:%S +0000')"
 REQUESTS_BEFORE="$(feed_requests)"
 launch_installed
-OLD_PID="$(pgrep -x Lumen | head -n 1)"
+OLD_PID="$(pgrep -x EchoVela | head -n 1)"
 NEW_PID=""
 for _ in {1..180}; do
     if [[ "$(installed_build)" == "$NEW_BUILD" ]]; then
-        NEW_PID="$(pgrep -x Lumen | grep -vx "$OLD_PID" | head -n 1 || true)"
+        NEW_PID="$(pgrep -x EchoVela | grep -vx "$OLD_PID" | head -n 1 || true)"
         if [[ -n "$NEW_PID" ]]; then break; fi
     fi
     sleep 1
@@ -201,16 +201,16 @@ if [[ "$(installed_build)" != "$NEW_BUILD" ]]; then
     exit 1
 fi
 if [[ -z "$NEW_PID" ]]; then
-    printf 'The update was installed but Lumen did not relaunch.\n' >&2
+    printf 'The update was installed but EchoVela did not relaunch.\n' >&2
     exit 1
 fi
 RUNNING_PATH="$(ps -o comm= -p "$NEW_PID")"
-if [[ "$(realpath "$RUNNING_PATH")" != "$(realpath "$INSTALLED_APP/Contents/MacOS/Lumen")" ]]; then
-    printf 'The relaunched Lumen runs from %s, not the updated app.\n' "$RUNNING_PATH" >&2
+if [[ "$(realpath "$RUNNING_PATH")" != "$(realpath "$INSTALLED_APP/Contents/MacOS/EchoVela")" ]]; then
+    printf 'The relaunched EchoVela runs from %s, not the updated app.\n' "$RUNNING_PATH" >&2
     exit 1
 fi
 codesign --verify --deep --strict "$INSTALLED_APP"
-test "$(defaults read "$DOMAIN" Lumen.updateTestMarker)" = "$MARKER"
+test "$(defaults read "$DOMAIN" EchoVela.updateTestMarker)" = "$MARKER"
 echo "   Installed build $NEW_BUILD, relaunched (process $NEW_PID), settings kept."
 
 echo "Code identity (what macOS privacy permissions are tied to):"

@@ -1,4 +1,4 @@
-name: Lumen CI
+name: EchoVela CI
 
 on:
   push:
@@ -51,10 +51,10 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
-          name: Lumen-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: EchoVela-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            dist/Lumen.zip
-            dist/Lumen.zip.sha256
+            dist/EchoVela.zip
+            dist/EchoVela.zip.sha256
             dist/signing.txt
           if-no-files-found: error
           retention-days: 30
@@ -93,7 +93,7 @@ jobs:
     timeout-minutes: 15
     # One release at a time; a newer run waits instead of racing an older one.
     concurrency:
-      group: lumen-release
+      group: echovela-release
       cancel-in-progress: false
     permissions:
       contents: write
@@ -153,7 +153,7 @@ jobs:
         if: steps.existing.outputs.released == 'false'
         uses: actions/download-artifact@v8
         with:
-          name: Lumen-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: EchoVela-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: release
       - name: Check the download, its signing and its update key
         if: steps.existing.outputs.released == 'false'
@@ -163,16 +163,16 @@ jobs:
           BUILD: ${{ steps.version.outputs.build }}
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
-          sha256sum -c Lumen.zip.sha256
+          sha256sum -c EchoVela.zip.sha256
           cat signing.txt
           mode="$(sed -n 's/^mode=//p' signing.txt)"
           notarized="$(sed -n 's/^notarized=//p' signing.txt)"
           case "$mode" in
             self-signed) ;;
             developer-id) [ "$notarized" = "yes" ] || { echo "Developer ID builds must be notarized before release."; exit 1; } ;;
-            *) echo "Releases need a real signing identity so macOS keeps Lumen's permissions; this build is $mode-signed."; exit 1 ;;
+            *) echo "Releases need a real signing identity so macOS keeps EchoVela's permissions; this build is $mode-signed."; exit 1 ;;
           esac
-          unzip -p Lumen.zip Lumen.app/Contents/Info.plist > shipped-Info.plist
+          unzip -p EchoVela.zip EchoVela.app/Contents/Info.plist > shipped-Info.plist
           read -r shipped_version shipped_build shipped_key < <(python3 -c "import plistlib; d = plistlib.load(open('shipped-Info.plist', 'rb')); print(d['CFBundleShortVersionString'], d['CFBundleVersion'], d['SUPublicEDKey'])")
           [ "$shipped_version" = "$VERSION" ] && [ "$shipped_build" = "$BUILD" ]
           signing_key="$(python3 -I ../Scripts/release/sparkle_release.py public-key --seed-env SPARKLE_PRIVATE_KEY)"
@@ -195,12 +195,12 @@ jobs:
             $tool require-newer --build "$BUILD" --current-feed current-appcast.xml
           fi
           public_key="$(python3 -c "import plistlib; print(plistlib.load(open('release/shipped-Info.plist', 'rb'))['SUPublicEDKey'])")"
-          signature="$($tool sign --seed-env SPARKLE_PRIVATE_KEY release/Lumen.zip)"
-          $tool verify --public-key "$public_key" release/Lumen.zip "$signature"
-          printf '%s\n' "$signature" > release/Lumen.zip.sig
-          $tool feed --app-name Lumen --version "$VERSION" --build "$BUILD" \
-            --url "https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/Lumen.zip" \
-            --archive release/Lumen.zip --signature "$signature" --minimum-system 26.0 \
+          signature="$($tool sign --seed-env SPARKLE_PRIVATE_KEY release/EchoVela.zip)"
+          $tool verify --public-key "$public_key" release/EchoVela.zip "$signature"
+          printf '%s\n' "$signature" > release/EchoVela.zip.sig
+          $tool feed --app-name EchoVela --version "$VERSION" --build "$BUILD" \
+            --url "https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/EchoVela.zip" \
+            --archive release/EchoVela.zip --signature "$signature" --minimum-system 26.0 \
             --notes "$notes" --output release/appcast.xml
           $tool sign-feed --seed-env SPARKLE_PRIVATE_KEY release/appcast.xml
           $tool verify-feed --public-key "$public_key" release/appcast.xml
@@ -210,8 +210,8 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           notes="docs/releases/$VERSION.md"
-          gh release create "v$VERSION" release/Lumen.zip release/Lumen.zip.sha256 release/Lumen.zip.sig release/appcast.xml \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Lumen $VERSION" --notes-file "$notes" --latest=false
+          gh release create "v$VERSION" release/EchoVela.zip release/EchoVela.zip.sha256 release/EchoVela.zip.sig release/appcast.xml \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "EchoVela $VERSION" --notes-file "$notes" --latest=false
       - name: Check the public download, then add it to the feed
         if: steps.existing.outputs.advertised == 'false'
         env:
@@ -222,11 +222,11 @@ jobs:
           base="https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION"
           mkdir -p public
           # Anyone can download it, logged out, and it's byte-for-byte the tested app.
-          curl -fsSL -o public/Lumen.zip "$base/Lumen.zip"
-          curl -fsSL -o public/Lumen.zip.sha256 "$base/Lumen.zip.sha256"
+          curl -fsSL -o public/EchoVela.zip "$base/EchoVela.zip"
+          curl -fsSL -o public/EchoVela.zip.sha256 "$base/EchoVela.zip.sha256"
           curl -fsSL -o public/appcast.xml "$base/appcast.xml"
-          (cd public && sha256sum -c Lumen.zip.sha256)
-          unzip -p public/Lumen.zip Lumen.app/Contents/Info.plist > public/Info.plist
+          (cd public && sha256sum -c EchoVela.zip.sha256)
+          unzip -p public/EchoVela.zip EchoVela.app/Contents/Info.plist > public/Info.plist
           public_key="$(python3 -c "import plistlib; print(plistlib.load(open('public/Info.plist', 'rb'))['SUPublicEDKey'])")"
           $tool verify-feed --public-key "$public_key" public/appcast.xml
           [ "$($tool feed-build public/appcast.xml)" = "$BUILD" ]

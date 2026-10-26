@@ -13,9 +13,10 @@ func color(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat, _ alpha: CGFloat =
     NSColor(calibratedRed: red, green: green, blue: blue, alpha: alpha)
 }
 
-/// Draws the Lumen icon on a 1024-point canvas: a navy rounded square (lighter at the top) on the
-/// standard macOS icon grid, and a sun whose rays and left half fade from blue to cyan, with a
-/// white right half, like a brightness control.
+/// Draws the EchoVela icon on a 1024-point canvas: a black rounded square (a little lighter at the
+/// top) on the standard macOS icon grid, and a silver sun whose disc is lit on the left and
+/// outlined on the right, like a brightness control. The colours are Echo App Studio's Signature
+/// black and silver.
 func drawIcon() {
     // macOS icon grid: an 824-point body centered on the 1024 canvas, with a soft drop shadow.
     let body = NSRect(x: 100, y: 100, width: 824, height: 824)
@@ -23,31 +24,31 @@ func drawIcon() {
 
     NSGraphicsContext.saveGraphicsState()
     let shadow = NSShadow()
-    shadow.shadowColor = color(0, 0, 0, 0.35)
+    shadow.shadowColor = color(0, 0, 0, 0.45)
     shadow.shadowOffset = NSSize(width: 0, height: -12)
     shadow.shadowBlurRadius = 28
     shadow.set()
-    color(0.07, 0.09, 0.16).setFill()
+    color(0.03, 0.03, 0.04).setFill()
     bodyPath.fill()
     NSGraphicsContext.restoreGraphicsState()
 
-    // Slate at the top fading to near-black navy by the middle.
+    // Near-black at the bottom, a little lighter at the top.
     let background = NSGradient(
-        colors: [color(0.05, 0.07, 0.13), color(0.08, 0.11, 0.19), color(0.30, 0.36, 0.49)],
+        colors: [color(0.02, 0.024, 0.027), color(0.047, 0.051, 0.059), color(0.106, 0.11, 0.122)],
         atLocations: [0, 0.55, 1],
         colorSpace: .deviceRGB
     )
     background?.draw(in: bodyPath, angle: 90)
-    color(1, 1, 1, 0.08).setStroke()
+    color(1, 1, 1, 0.12).setStroke()
     let rim = NSBezierPath(roundedRect: body.insetBy(dx: 1.5, dy: 1.5), xRadius: 184, yRadius: 184)
     rim.lineWidth = 3
     rim.stroke()
 
     let center = NSPoint(x: 512, y: 512)
-    // Blue at the bottom of the sun to cyan at the top.
-    let bottomColor = (red: CGFloat(0.17), green: CGFloat(0.49), blue: CGFloat(0.94))
-    let topColor = (red: CGFloat(0.55), green: CGFloat(0.88), blue: CGFloat(1.0))
-    func sunColor(atY y: CGFloat) -> NSColor {
+    // Silver from mid-grey at the bottom of the sun to near-white at the top.
+    let bottomColor = (red: CGFloat(0.42), green: CGFloat(0.43), blue: CGFloat(0.45))
+    let topColor = (red: CGFloat(0.96), green: CGFloat(0.96), blue: CGFloat(0.97))
+    func silver(atY y: CGFloat) -> NSColor {
         let t = min(max((y - 180) / (844 - 180), 0), 1)
         return color(
             bottomColor.red + (topColor.red - bottomColor.red) * t,
@@ -68,25 +69,24 @@ func drawIcon() {
         ray.line(to: end)
         ray.lineWidth = 46
         ray.lineCapStyle = .round
-        sunColor(atY: (start.y + end.y) / 2).setStroke()
+        silver(atY: (start.y + end.y) / 2).setStroke()
         ray.stroke()
     }
 
-    // The disc: left half blue to cyan, right half white.
+    // The disc: the left half is silver, the right half is only an outline.
     let discRadius: CGFloat = 178
     let leftHalf = NSBezierPath()
     leftHalf.move(to: NSPoint(x: center.x, y: center.y + discRadius))
     leftHalf.appendArc(withCenter: center, radius: discRadius, startAngle: 90, endAngle: 270, clockwise: false)
     leftHalf.close()
-    let discGradient = NSGradient(starting: sunColor(atY: center.y - discRadius), ending: sunColor(atY: center.y + discRadius))
+    let discGradient = NSGradient(starting: color(0.54, 0.545, 0.57), ending: color(0.96, 0.96, 0.965))
     discGradient?.draw(in: leftHalf, angle: 90)
 
-    let rightHalf = NSBezierPath()
-    rightHalf.move(to: NSPoint(x: center.x, y: center.y - discRadius))
-    rightHalf.appendArc(withCenter: center, radius: discRadius, startAngle: 270, endAngle: 450, clockwise: false)
-    rightHalf.close()
-    color(0.97, 0.98, 1.0).setFill()
-    rightHalf.fill()
+    let rightEdge = NSBezierPath()
+    rightEdge.appendArc(withCenter: center, radius: discRadius - 10, startAngle: -90, endAngle: 90, clockwise: false)
+    rightEdge.lineWidth = 20
+    color(0.66, 0.665, 0.69).setStroke()
+    rightEdge.stroke()
 }
 
 func renderIcon(pixelSize: Int, fileName: String) throws {
@@ -102,12 +102,12 @@ func renderIcon(pixelSize: Int, fileName: String) throws {
         bytesPerRow: 0,
         bitsPerPixel: 0
     ) else {
-        throw NSError(domain: "LumenIcon", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not create icon bitmap"])
+        throw NSError(domain: "EchoVelaIcon", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not create icon bitmap"])
     }
 
     NSGraphicsContext.saveGraphicsState()
     guard let context = NSGraphicsContext(bitmapImageRep: bitmap) else {
-        throw NSError(domain: "LumenIcon", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not create icon graphics context"])
+        throw NSError(domain: "EchoVelaIcon", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not create icon graphics context"])
     }
     NSGraphicsContext.current = context
     context.imageInterpolation = .high
@@ -119,7 +119,7 @@ func renderIcon(pixelSize: Int, fileName: String) throws {
     NSGraphicsContext.restoreGraphicsState()
 
     guard let data = bitmap.representation(using: .png, properties: [:]) else {
-        throw NSError(domain: "LumenIcon", code: 3, userInfo: [NSLocalizedDescriptionKey: "Could not encode icon PNG"])
+        throw NSError(domain: "EchoVelaIcon", code: 3, userInfo: [NSLocalizedDescriptionKey: "Could not encode icon PNG"])
     }
     try data.write(to: iconsetURL.appendingPathComponent(fileName), options: .atomic)
 }

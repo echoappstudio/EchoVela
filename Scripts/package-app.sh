@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-APP_NAME="Lumen"
+APP_NAME="EchoVela"
 APP_BUNDLE="dist/${APP_NAME}.app"
 ZIP_PATH="dist/${APP_NAME}.zip"
 VERIFY_DIR="dist/verify-extracted"
@@ -16,11 +16,11 @@ export SIGN_MODE
 rm -rf "$APP_BUNDLE" "$ZIP_PATH" "$ZIP_PATH.sha256" "$VERIFY_DIR" "$ICONSET_DIR" "$SIGNING_REPORT" "dist/notarize"
 mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources" "$APP_BUNDLE/Contents/Frameworks" "dist"
 
-swift build --configuration release --product LumenApp
-install -m 755 ".build/release/LumenApp" "$APP_BUNDLE/Contents/MacOS/Lumen"
+swift build --configuration release --product EchoVelaApp
+install -m 755 ".build/release/EchoVelaApp" "$APP_BUNDLE/Contents/MacOS/EchoVela"
 cp "Resources/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 cp "Resources/Acknowledgements.txt" "$APP_BUNDLE/Contents/Resources/Acknowledgements.txt"
-test -x "$APP_BUNDLE/Contents/MacOS/Lumen"
+test -x "$APP_BUNDLE/Contents/MacOS/EchoVela"
 
 # Sparkle comes from the exact version SwiftPM resolved and checksummed.
 SPARKLE_FRAMEWORKS=()
@@ -35,24 +35,24 @@ ditto "${SPARKLE_FRAMEWORKS[0]}" "$APP_BUNDLE/Contents/Frameworks/Sparkle.framew
 /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework/Resources/Info.plist" | grep -Fx '2.10.0'
 test -x "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate"
 test -x "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework/Versions/B/Updater.app/Contents/MacOS/Updater"
-otool -L "$APP_BUNDLE/Contents/MacOS/Lumen" | grep -F '@rpath/Sparkle.framework/Versions/B/Sparkle'
-otool -l "$APP_BUNDLE/Contents/MacOS/Lumen" | grep -F 'path @executable_path/../Frameworks'
+otool -L "$APP_BUNDLE/Contents/MacOS/EchoVela" | grep -F '@rpath/Sparkle.framework/Versions/B/Sparkle'
+otool -l "$APP_BUNDLE/Contents/MacOS/EchoVela" | grep -F 'path @executable_path/../Frameworks'
 grep -F 'Sparkle 2.10.0' "$APP_BUNDLE/Contents/Resources/Acknowledgements.txt"
 
 swift Scripts/create-app-icon.swift "$ICONSET_DIR"
 iconutil -c icns "$ICONSET_DIR" -o "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
 test -s "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
 
-/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP_BUNDLE/Contents/Info.plist" | grep -Fx 'Lumen'
-/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_BUNDLE/Contents/Info.plist" | grep -Fx 'com.lumen.app'
-/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$APP_BUNDLE/Contents/Info.plist" | grep -Fx 'Lumen'
-/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP_BUNDLE/Contents/Info.plist" | grep -Fx 'Lumen'
+/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP_BUNDLE/Contents/Info.plist" | grep -Fx 'EchoVela'
+/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_BUNDLE/Contents/Info.plist" | grep -Fx 'com.echoapps.echovela'
+/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$APP_BUNDLE/Contents/Info.plist" | grep -Fx 'EchoVela'
+/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP_BUNDLE/Contents/Info.plist" | grep -Fx 'EchoVela'
 /usr/libexec/PlistBuddy -c 'Print :LSUIElement' "$APP_BUNDLE/Contents/Info.plist" | grep -Fx 'true'
 /usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "$APP_BUNDLE/Contents/Info.plist" | grep -E '^https://'
 /usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "$APP_BUNDLE/Contents/Info.plist" | grep -E '^[A-Za-z0-9+/]{43}=$'
 plutil -lint "$APP_BUNDLE/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_BUNDLE/Contents/Info.plist" | grep -Fx '0.2.3'
-/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_BUNDLE/Contents/Info.plist" | grep -Fx '5'
+/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_BUNDLE/Contents/Info.plist" | grep -Fx '0.3.0'
+/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_BUNDLE/Contents/Info.plist" | grep -Fx '6'
 
 # Signing is the last change to the app; everything after only zips, checks and hashes it.
 bash Scripts/sign-app.sh "$APP_BUNDLE"
@@ -67,14 +67,14 @@ mkdir -p "$VERIFY_DIR"
 ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$ZIP_PATH"
 ditto -x -k "$ZIP_PATH" "$VERIFY_DIR"
 EXTRACTED_APP="$VERIFY_DIR/${APP_NAME}.app"
-test -x "$EXTRACTED_APP/Contents/MacOS/Lumen"
+test -x "$EXTRACTED_APP/Contents/MacOS/EchoVela"
 test -s "$EXTRACTED_APP/Contents/Resources/AppIcon.icns"
 test -x "$EXTRACTED_APP/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate"
 test -L "$EXTRACTED_APP/Contents/Frameworks/Sparkle.framework/Versions/Current"
-/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$EXTRACTED_APP/Contents/Info.plist" | grep -Fx 'Lumen'
+/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$EXTRACTED_APP/Contents/Info.plist" | grep -Fx 'EchoVela'
 plutil -lint "$EXTRACTED_APP/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$EXTRACTED_APP/Contents/Info.plist" | grep -Fx '0.2.3'
-/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$EXTRACTED_APP/Contents/Info.plist" | grep -Fx '5'
+/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$EXTRACTED_APP/Contents/Info.plist" | grep -Fx '0.3.0'
+/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$EXTRACTED_APP/Contents/Info.plist" | grep -Fx '6'
 codesign --verify --deep --strict "$EXTRACTED_APP"
 if [[ "$NOTARIZED" == "yes" ]]; then
     xcrun stapler validate "$EXTRACTED_APP"
