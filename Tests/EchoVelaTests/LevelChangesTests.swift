@@ -2,26 +2,43 @@ import XCTest
 @testable import EchoVelaCore
 
 final class LevelChangesTests: XCTestCase {
-    func testStepsMoveOneSixteenthOnTheGrid() {
-        XCTAssertEqual(LevelStepping.next(from: 0.5, up: true, fine: false), 9.0 / 16)
-        XCTAssertEqual(LevelStepping.next(from: 0.5, up: false, fine: false), 7.0 / 16)
+    private func press(_ start: Double, up: Bool, times: Int, fine: Bool = false) -> [Double] {
+        var level = start
+        return (0 ..< times).map { _ in
+            level = LevelStepping.next(from: level, up: up, fine: fine)
+            return level
+        }
+    }
+
+    func testPressesMoveFivePercentAtATime() {
+        XCTAssertEqual(LevelStepping.next(from: 0.5, up: true, fine: false), 0.55)
+        XCTAssertEqual(LevelStepping.next(from: 0.5, up: false, fine: false), 0.45)
         XCTAssertEqual(LevelStepping.next(from: 1, up: true, fine: false), 1)
         XCTAssertEqual(LevelStepping.next(from: 0, up: false, fine: false), 0)
+        XCTAssertEqual(press(1, up: false, times: 5), [0.95, 0.9, 0.85, 0.8, 0.75])
+    }
+
+    func testBelowFivePercentEachPressMovesOnePercent() {
+        // Volume used to jump from 6% straight to 0; now it goes 10, 5, 4, 3, 2, 1, 0.
+        XCTAssertEqual(press(0.1, up: false, times: 6), [0.05, 0.04, 0.03, 0.02, 0.01, 0])
+        XCTAssertEqual(press(0, up: true, times: 7), [0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.15])
     }
 
     func testOffGridLevelsSnapAndNeverMakeATinyStep() {
-        // Between 8/16 and 9/16: up goes to 9/16, down to 8/16.
-        XCTAssertEqual(LevelStepping.next(from: 0.53, up: true, fine: false), 9.0 / 16)
-        XCTAssertEqual(LevelStepping.next(from: 0.53, up: false, fine: false), 8.0 / 16)
-        // Just under 9/16: up skips to 10/16 rather than moving a hair.
-        XCTAssertEqual(LevelStepping.next(from: 0.56, up: true, fine: false), 10.0 / 16)
-        // Just over 8/16: down skips to 7/16.
-        XCTAssertEqual(LevelStepping.next(from: 0.505, up: false, fine: false), 7.0 / 16)
+        XCTAssertEqual(LevelStepping.next(from: 0.53, up: true, fine: false), 0.55)
+        XCTAssertEqual(LevelStepping.next(from: 0.53, up: false, fine: false), 0.5)
+        // Just under 55%: up skips to 60% rather than moving a hair.
+        XCTAssertEqual(LevelStepping.next(from: 0.549, up: true, fine: false), 0.6)
+        // Just over 50%: down skips to 45%.
+        XCTAssertEqual(LevelStepping.next(from: 0.501, up: false, fine: false), 0.45)
+        XCTAssertEqual(LevelStepping.next(from: 0.049, up: true, fine: false), 0.1)
+        XCTAssertEqual(LevelStepping.next(from: 0.051, up: false, fine: false), 0.04)
     }
 
-    func testFineStepsUseSixtyFourths() {
-        XCTAssertEqual(LevelStepping.next(from: 0.5, up: true, fine: true), 33.0 / 64)
-        XCTAssertEqual(LevelStepping.next(from: 0.5, up: false, fine: true), 31.0 / 64)
+    func testFineStepsMoveOnePercent() {
+        XCTAssertEqual(LevelStepping.next(from: 0.5, up: true, fine: true), 0.51)
+        XCTAssertEqual(LevelStepping.next(from: 0.5, up: false, fine: true), 0.49)
+        XCTAssertEqual(LevelStepping.next(from: 0.1, up: false, fine: true), 0.09)
     }
 
     func testSmoothTransitionsReachTheTargetExactly() {

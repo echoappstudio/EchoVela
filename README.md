@@ -21,7 +21,7 @@
 - **Real monitor brightness.** External monitors change their own backlight over the video cable (DDC), just like pressing the buttons on the monitor, so the picture stays sharp and colors stay true. Your MacBook and Apple displays use macOS's own brightness control.
 - **Works with every screen.** Monitors that can't be controlled directly (some HDMI ports, docks, adapters and TVs, AirPlay and Sidecar) are dimmed in software instead. EchoVela works out which is which on its own; you can also choose for each monitor in **Displays**.
 - **Darker than dark.** For late nights, the bottom quarter of the slider dims the picture further once a monitor reaches its lowest setting. The screen never goes fully black.
-- **Your keyboard just works.** The brightness keys change the monitor under the pointer (or every display), and the volume keys control a monitor's speakers when your Mac's sound plays through them. Hold Option and Shift for finer steps.
+- **Your keyboard just works.** The brightness keys change the monitor under the pointer (or every display), and the volume keys control a monitor's speakers when your Mac's sound plays through them. Keys move 5% at a time, and 1% at a time below 5%. Hold Option and Shift for 1% steps.
 - **Presets.** Day, Evening and Night set every display at once with one click or one shortcut. Add your own (up to 12), pick a symbol, reorder them, and restore the original three anytime. Presets fade in slowly, so the change is easy on your eyes.
 - **Your own shortcuts** for Brighter, Dimmer and each preset. They work in every app, and EchoVela warns you if two of them clash.
 - **Gentle changes.** Brightness glides to its new level instead of jumping, and a small glass indicator shows the new level in the top-right corner of the screen you changed. Turn on **Move all displays together** to keep every screen at the same level.
@@ -45,7 +45,7 @@ You need an Apple Silicon Mac with macOS 26 or later.
 | Keys | What they do |
 |---|---|
 | **Brightness keys** | Brighter or dimmer on the display with the pointer, or on every display (choose in **Shortcuts**). Needs Accessibility. |
-| **Option + Shift + brightness keys** | The same in smaller steps. |
+| **Option + Shift + brightness keys** | The same in 1% steps. |
 | **Volume keys** | Change the monitor's speakers when your Mac's sound output is set to that monitor. Otherwise they work as usual. Needs Accessibility. |
 | **Your Brighter and Dimmer shortcuts** | Set them in **Shortcuts**. They change the same displays as the brightness keys and don't need Accessibility. |
 | **Your preset shortcuts** | One for each preset, set in **Shortcuts**. |
