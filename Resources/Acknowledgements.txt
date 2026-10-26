@@ -1,4 +1,4 @@
-Lumen includes the following open-source software.
+EchoVela includes the following open-source software.
 
 ========================================
 Sparkle 2.10.0 (https://sparkle-project.org)

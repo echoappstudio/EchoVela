@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PACKAGED_APP="$ROOT_DIR/dist/verify-extracted/Lumen.app"
+PACKAGED_APP="$ROOT_DIR/dist/verify-extracted/EchoVela.app"
 BUILD_DIR="$ROOT_DIR/.build"
 BUILD_BACKUP="$ROOT_DIR/.build-smoke-test-backup.$$"
 SMOKE_PARENT="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
@@ -11,11 +11,11 @@ if [[ ! -d "$PACKAGED_APP" ]]; then
     printf 'Extracted packaged app does not exist: %s\n' "$PACKAGED_APP" >&2
     exit 1
 fi
-test -x "$PACKAGED_APP/Contents/MacOS/Lumen"
+test -x "$PACKAGED_APP/Contents/MacOS/EchoVela"
 
 mkdir -p "$SMOKE_PARENT"
-SMOKE_DIR="$(mktemp -d "$SMOKE_PARENT/lumen-smoke.XXXXXX")"
-SMOKE_APP="$SMOKE_DIR/Lumen.app"
+SMOKE_DIR="$(mktemp -d "$SMOKE_PARENT/echovela-smoke.XXXXXX")"
+SMOKE_APP="$SMOKE_DIR/EchoVela.app"
 
 echo 'Copying the extracted release app to a clean temporary location.'
 ditto "$PACKAGED_APP" "$SMOKE_APP"
@@ -23,7 +23,7 @@ ditto "$PACKAGED_APP" "$SMOKE_APP"
 cleanup() {
     status=$?
     trap - EXIT
-    pkill -x Lumen >/dev/null 2>&1 || true
+    pkill -x EchoVela >/dev/null 2>&1 || true
     if [[ -d "$BUILD_BACKUP" ]]; then
         rm -rf "$BUILD_DIR"
         mv "$BUILD_BACKUP" "$BUILD_DIR"
@@ -49,15 +49,15 @@ printf 'Build directory is unavailable; launching extracted app from %s\n' "$SMO
 open -n -g "$SMOKE_APP"
 
 for _ in {1..10}; do
-    if pgrep -x Lumen >/dev/null 2>&1; then
+    if pgrep -x EchoVela >/dev/null 2>&1; then
         sleep 5
-        if pgrep -x Lumen >/dev/null 2>&1; then
-            printf 'Clean-location launch smoke test passed; Lumen remained running.\n'
+        if pgrep -x EchoVela >/dev/null 2>&1; then
+            printf 'Clean-location launch smoke test passed; EchoVela remained running.\n'
             exit 0
         fi
     fi
     sleep 1
 done
 
-printf 'Lumen did not remain running after launch without its SwiftPM build directory.\n' >&2
+printf 'EchoVela did not remain running after launch without its SwiftPM build directory.\n' >&2
 exit 1
