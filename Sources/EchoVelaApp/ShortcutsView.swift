@@ -43,7 +43,7 @@ struct ShortcutsView: View {
                 }
                 .fixedSize()
                 .disabled(!brightnessKeys)
-                Text("Your MacBook and Apple displays keep their usual brightness keys. Hold Option and Shift for smaller steps.")
+                Text("Your MacBook and Apple displays keep their usual brightness keys. Keys move 5% at a time, and 1% at a time below 5%. Hold Option and Shift for 1% steps.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

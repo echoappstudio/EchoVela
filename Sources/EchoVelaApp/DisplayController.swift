@@ -290,7 +290,7 @@ final class DisplayController {
     /// Mutes, or puts the volume back where it was.
     @discardableResult
     func toggleMute(_ display: EchoVelaDisplay) -> Double {
-        let next = (display.volume ?? 0) > 0 ? 0 : max(display.volumeBeforeMute, 1 / LevelStepping.steps)
+        let next = (display.volume ?? 0) > 0 ? 0 : max(display.volumeBeforeMute, LevelStepping.minimumRestoredLevel)
         setVolume(next, for: display)
         return next
     }
