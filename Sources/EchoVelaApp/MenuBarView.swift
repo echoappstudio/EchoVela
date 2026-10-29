@@ -74,10 +74,8 @@ struct MenuBarView: View {
                 Spacer()
                 Button("Check for Updates…") { runtime.updates.checkForUpdates() }
                     .disabled(!runtime.updates.canCheckForUpdates)
-                    .foregroundStyle(.secondary)
                 Spacer()
                 Button("Quit") { NSApp.terminate(nil) }
-                    .foregroundStyle(.secondary)
             }
             .font(.system(size: 12))
             .buttonStyle(.borderless)
