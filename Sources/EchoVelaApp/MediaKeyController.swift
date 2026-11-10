@@ -1,6 +1,5 @@
 import AppKit
 import ApplicationServices
-import CoreAudio
 import EchoVelaCore
 import Observation
 
@@ -148,29 +147,4 @@ private func mediaKeyTapCallback(
         controller.handle(press, fine: fine)
     }
     return handled ? nil : Unmanaged.passUnretained(event)
-}
-
-/// The Mac's current sound output.
-enum SoundOutput {
-    static func currentDeviceName() -> String? {
-        var deviceID = AudioDeviceID(0)
-        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &deviceID) == noErr,
-              deviceID != 0 else {
-            return nil
-        }
-        address.mSelector = kAudioObjectPropertyName
-        var name: Unmanaged<CFString>?
-        size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
-        let status = withUnsafeMutablePointer(to: &name) { pointer in
-            AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, pointer)
-        }
-        guard status == noErr, let name else { return nil }
-        return name.takeRetainedValue() as String
-    }
 }

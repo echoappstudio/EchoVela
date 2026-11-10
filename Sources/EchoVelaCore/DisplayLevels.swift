@@ -106,6 +106,12 @@ public enum StartupBrightnessPolicy {
         }
         return Decision(level: ExtraDimming.level(forHardware: hardware, isEnabled: extraDimming), needsWrite: false)
     }
+
+    /// For a monitor that answered before but missed the brightness question this time: keep what
+    /// EchoVela was showing and send nothing, so the screen doesn't jump.
+    public static func afterMissedReading(previous: Double?, saved: Double?) -> Decision {
+        Decision(level: Level.clamped(previous ?? saved ?? 1), needsWrite: false)
+    }
 }
 
 /// Small helpers for 0–1 levels.

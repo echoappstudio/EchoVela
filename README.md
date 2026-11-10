@@ -17,10 +17,12 @@
 
 ## Features
 
-- **Every display in one place.** Click the sun in the menu bar for a brightness slider for each screen, plus contrast and volume sliders for monitors that have them, and your presets one click away. Open EchoVela for the full window, with Displays, Presets, Shortcuts and Settings in the sidebar.
+- **Every display in one place.** Click the sun in the menu bar for a brightness slider for each screen, a contrast slider for monitors that have one, one volume slider and your presets one click away. Open EchoVela for the full window, with Displays, Presets, Shortcuts and Settings in the sidebar.
 - **Real monitor brightness.** External monitors change their own backlight over the video cable (DDC), just like pressing the buttons on the monitor, so the picture stays sharp and colors stay true. Your MacBook and Apple displays use macOS's own brightness control.
 - **Works with every screen.** Monitors that can't be controlled directly (some HDMI ports, docks, adapters and TVs, AirPlay and Sidecar) are dimmed in software instead. EchoVela works out which is which on its own; you can also choose for each monitor in **Displays**.
 - **Darker than dark.** For late nights, the bottom quarter of the slider dims the picture further once a monitor reaches its lowest setting. The screen never goes fully black.
+- **One volume slider that follows the sound.** The panel shows where your Mac's sound is playing. When it's a monitor's speakers, the slider changes the monitor's own volume; on your MacBook's speakers, headphones or AirPods, it's your Mac's volume.
+- **Keeps up with your monitor.** If a monitor misses a question after waking up, EchoVela keeps its last settings and asks again. If the monitor stops taking changes, EchoVela reconnects, and tells you if it still isn't answering, with a **Check Again** button.
 - **Your keyboard just works.** The brightness keys change the monitor under the pointer (or every display), and the volume keys control a monitor's speakers when your Mac's sound plays through them. Keys move 5% at a time, and 1% at a time below 5%. Hold Option and Shift for 1% steps.
 - **Presets.** Day, Evening and Night set every display at once with one click or one shortcut. Add your own (up to 12), pick a symbol, reorder them, and restore the original three anytime. Presets fade in slowly, so the change is easy on your eyes.
 - **Your own shortcuts** for Brighter, Dimmer and each preset. They work in every app, and EchoVela warns you if two of them clash.
@@ -54,7 +56,7 @@ Your MacBook and Apple displays keep their usual brightness keys.
 
 ## How it works
 
-1. **Finding your displays.** EchoVela asks each external monitor what it supports: brightness, contrast and volume. The answers decide which sliders you see.
+1. **Finding your displays.** EchoVela asks each external monitor what it supports: brightness, contrast and volume. The answers decide which sliders you see. It asks again whenever the displays change or your Mac wakes, keeping what a monitor said before if it's slow to answer.
 2. **Monitors over DDC.** Most external monitors accept brightness, contrast and volume commands over their video cable (DDC/CI). EchoVela sends them through macOS's display services on Apple Silicon. Some HDMI ports, docks and adapters don't pass these commands on.
 3. **Software dimming.** A dark layer over the whole screen. It's used for screens that can't be controlled directly, and for the extra dimming below a monitor's minimum. Clicks pass straight through it.
 4. **MacBook and Apple displays.** EchoVela uses macOS's own brightness control, and the keyboard keeps working as usual on them.

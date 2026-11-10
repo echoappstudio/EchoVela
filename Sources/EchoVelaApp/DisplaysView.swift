@@ -116,6 +116,15 @@ private struct DisplayPanel: View {
                             Button(volume == 0 ? "Unmute" : "Mute") { displays.toggleMute(display) }
                         }
                     }
+                    if let elsewhere = soundElsewhere {
+                        Text("These are the monitor's own speakers. Your Mac's sound is playing on \(elsewhere) right now.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                if display.isNotAnswering {
+                    NotAnsweringNotice(display: display)
                 }
 
                 if display.hasConnection || display.kind == .software, display.kind != .native {
@@ -126,6 +135,12 @@ private struct DisplayPanel: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 4)
         }
+    }
+
+    /// The Mac's sound output when it isn't this monitor.
+    private var soundElsewhere: String? {
+        if case .monitor(let id) = runtime.soundRoute, id == display.id { return nil }
+        return runtime.sound.deviceName
     }
 
     private func row<Content: View>(_ title: String, level: Double, @ViewBuilder content: () -> Content) -> some View {
