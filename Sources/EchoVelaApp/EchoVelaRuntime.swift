@@ -18,6 +18,7 @@ final class EchoVelaRuntime {
     let shortcuts: ShortcutController
     let launchAtLogin: LaunchAtLoginController
     let updates: UpdateController
+    let sound: SoundOutputController
 
     @ObservationIgnored private let indicator = LevelIndicatorController()
     @ObservationIgnored private let defaults: UserDefaults
@@ -34,6 +35,7 @@ final class EchoVelaRuntime {
         shortcuts = ShortcutController(defaults: defaults)
         launchAtLogin = LaunchAtLoginController(defaults: defaults)
         updates = UpdateController(displays: displays)
+        sound = SoundOutputController()
     }
 
     var brightnessKeysEnabled: Bool { Preferences.isOn(Preferences.brightnessKeysKey, defaults: defaults) }
@@ -57,6 +59,7 @@ final class EchoVelaRuntime {
         shortcuts.updatePresets(presets.presets)
         updateKeyListening()
         updates.start()
+        sound.start()
 
         let center = NotificationCenter.default
         observers.append(center.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
@@ -86,6 +89,19 @@ final class EchoVelaRuntime {
             guard !Task.isCancelled, let self else { return }
             self.displays.refreshDisplays()
         }
+    }
+
+    // MARK: Sound
+
+    /// Where the Mac's sound is going, and so what the volume slider and keys change.
+    var soundRoute: SoundRoute {
+        SoundRouting.route(
+            outputName: sound.deviceName,
+            outputHasVolume: sound.hasVolume,
+            monitors: displays.displays
+                .filter { $0.kind != .native }
+                .map { SoundMonitor(id: $0.id, name: $0.name, hasVolume: $0.volume != nil) }
+        )
     }
 
     // MARK: Presets and shortcuts
@@ -154,10 +170,10 @@ final class EchoVelaRuntime {
 
     /// The volume keys change a monitor's speakers only while the Mac's sound goes to that monitor.
     private func handleVolumeKey(_ press: MediaKeyPress, fine: Bool) -> Bool {
-        guard volumeKeysEnabled, let outputName = SoundOutput.currentDeviceName() else { return false }
-        guard let display = displays.displays.first(where: {
-            $0.volume != nil && AudioDeviceMatching.matches(outputDevice: outputName, displayName: $0.name)
-        }) else {
+        guard volumeKeysEnabled else { return false }
+        sound.refresh()
+        // Anywhere but a monitor's speakers, macOS handles the keys and shows its own indicator.
+        guard case .monitor(let id) = soundRoute, let display = displays.display(withID: id) else {
             return false
         }
         guard press.isDown else { return true }

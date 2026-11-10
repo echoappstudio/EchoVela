@@ -57,12 +57,13 @@ public enum DDCMessage {
         return bytes
     }
 
-    /// Reads a "Get VCP Feature" reply. Returns nil for a damaged reply, an error from the monitor,
-    /// or a reply that claims the control has no range.
-    public static func parseReply(_ reply: [UInt8]) -> DDCReading? {
+    /// Reads a "Get VCP Feature" reply to a question about `control`. Returns nil for a damaged
+    /// reply, an error from the monitor, a reply about another control (a late answer to an earlier
+    /// question), or a reply that claims the control has no range.
+    public static func parseReply(_ reply: [UInt8], for control: UInt8) -> DDCReading? {
         guard reply.count == replyLength else { return nil }
         guard checksum(seed: replyChecksumSeed, bytes: reply.dropLast()) == reply[replyLength - 1] else { return nil }
-        guard reply[2] == replyOpcode, reply[3] == 0x00 else { return nil }
+        guard reply[2] == replyOpcode, reply[3] == 0x00, reply[4] == control else { return nil }
         let maximum = UInt16(reply[6]) << 8 | UInt16(reply[7])
         let current = UInt16(reply[8]) << 8 | UInt16(reply[9])
         guard maximum > 0 else { return nil }

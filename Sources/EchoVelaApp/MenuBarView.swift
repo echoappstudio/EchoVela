@@ -43,6 +43,8 @@ struct MenuBarView: View {
                 }
             }
 
+            MenuSoundControls()
+
             presetButtons
 
             if runtime.brightnessKeysEnabled, !runtime.mediaKeys.hasAccessibilityPermission {
@@ -87,6 +89,8 @@ struct MenuBarView: View {
         .onAppear {
             displays.refreshNativeLevels()
             runtime.mediaKeys.refreshPermission()
+            runtime.sound.refresh()
+            displays.recheckMissingSettings()
         }
     }
 
@@ -149,28 +153,145 @@ private struct MenuDisplayControls: View {
                     displays.setContrast($0, for: display)
                 }
             }
-            if let volume = display.volume {
-                HStack(spacing: 6) {
-                    Button {
-                        displays.toggleMute(display)
-                    } label: {
-                        Image(systemName: volume == 0 ? "speaker.slash.fill" : "speaker.fill")
-                            .frame(width: 16)
-                    }
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(.secondary)
-                    .help(volume == 0 ? "Unmute" : "Mute")
-                    Slider(value: Binding(get: { volume }, set: { displays.setVolume($0, for: display) }), in: 0 ... 1)
-                    Image(systemName: "speaker.wave.3.fill")
-                        .foregroundStyle(.secondary)
-                        .frame(width: 18)
-                }
+            if display.isNotAnswering {
+                NotAnsweringNotice(display: display)
             }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .echoVelaCard()
+    }
+}
+
+/// One volume slider that follows the sound: a monitor's own speakers when the Mac's sound plays
+/// through them, otherwise macOS's own volume for the current output.
+private struct MenuSoundControls: View {
+    @Environment(EchoVelaRuntime.self) private var runtime
+
+    private var displays: DisplayController { runtime.displays }
+    private var sound: SoundOutputController { runtime.sound }
+
+    var body: some View {
+        let route = runtime.soundRoute
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Sound")
+                    .font(.subheadline.weight(.semibold))
+                Text(caption(for: route))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            slider(for: route)
+            // A monitor that stopped answering says so on its own card; otherwise offer a new try here.
+            if case .monitorWithoutVolume(let id) = route, let display = displays.display(withID: id),
+               !display.isChecking, !display.isAskingAgain, !display.isNotAnswering, display.hasConnection {
+                Button("Check Again") { displays.checkAgain() }
+                    .font(.caption)
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(EchoVelaTheme.accent)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .echoVelaCard()
+    }
+
+    @ViewBuilder
+    private func slider(for route: SoundRoute) -> some View {
+        switch route {
+        case .monitor(let id):
+            if let display = displays.display(withID: id), let volume = display.volume {
+                VolumeRow(volume: volume, isMuted: volume == 0, isEnabled: true) {
+                    displays.toggleMute(display)
+                } onChange: {
+                    displays.setVolume($0, for: display)
+                }
+            }
+        case .mac:
+            VolumeRow(volume: sound.volume, isMuted: sound.isMuted, isEnabled: true) {
+                sound.toggleMute()
+            } onChange: {
+                sound.setVolume($0)
+            }
+        case .monitorWithoutVolume, .fixed, .none:
+            VolumeRow(volume: 0, isMuted: false, isEnabled: false, onMute: {}, onChange: { _ in })
+        }
+    }
+
+    private func caption(for route: SoundRoute) -> String {
+        let output = sound.deviceName ?? "this Mac"
+        switch route {
+        case .monitor(let id):
+            let name = displays.display(withID: id)?.name ?? output
+            return "Playing on \(name)'s speakers"
+        case .mac:
+            return "Playing on \(output)"
+        case .monitorWithoutVolume(let id):
+            guard let display = displays.display(withID: id) else { return "Playing on \(output)" }
+            if display.isChecking || display.isAskingAgain {
+                return "Playing on \(display.name). Checking its volume…"
+            }
+            return "Playing on \(display.name). EchoVela can't reach its volume right now."
+        case .fixed:
+            return "Playing on \(output), which has no volume control."
+        case .none:
+            return "No sound output."
+        }
+    }
+}
+
+/// Mute button, slider and loud-speaker symbol.
+private struct VolumeRow: View {
+    let volume: Double
+    let isMuted: Bool
+    let isEnabled: Bool
+    let onMute: () -> Void
+    let onChange: (Double) -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Button(action: onMute) {
+                Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.fill")
+                    .frame(width: 16)
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+            .help(isMuted ? "Unmute" : "Mute")
+            Slider(value: Binding(get: { volume }, set: { onChange($0) }), in: 0 ... 1)
+            Image(systemName: "speaker.wave.3.fill")
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
+        }
+        .disabled(!isEnabled)
+    }
+}
+
+/// Says a monitor isn't answering, with a way to try again.
+struct NotAnsweringNotice: View {
+    @Environment(EchoVelaRuntime.self) private var runtime
+    let display: EchoVelaDisplay
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Label("The monitor isn't answering.", systemImage: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(.orange)
+                .lineLimit(1)
+            Spacer(minLength: 4)
+            if display.isChecking || display.isAskingAgain {
+                ProgressView()
+                    .controlSize(.mini)
+            } else {
+                Button("Check Again") { runtime.displays.checkAgain() }
+                    .font(.caption)
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(EchoVelaTheme.accent)
+            }
+        }
     }
 }
 

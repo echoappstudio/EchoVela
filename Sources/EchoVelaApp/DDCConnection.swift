@@ -2,29 +2,36 @@ import Foundation
 import IOKit
 import EchoVelaCore
 
-/// A DDC/CI connection to one external monitor. Every message goes through one serial queue, and
-/// writes are coalesced: while a write is in flight, newer values replace older ones that haven't
-/// been sent yet, so dragging a slider never builds up a backlog.
+/// A DDC/CI connection to one external monitor. Every message goes through one serial queue per
+/// monitor, shared by every connection EchoVela makes to it, so a new check after the displays
+/// change never talks over an older one. Writes are coalesced: while a write is in flight, newer
+/// values replace older ones that haven't been sent yet, so dragging a slider never builds up a backlog.
 final class DDCConnection: @unchecked Sendable {
     private let service: UnsafeMutableRawPointer
     private let queue: DispatchQueue
     private let lock = NSLock()
-    private var pendingWrites: [UInt8: UInt16] = [:]
+    private var pendingWrites: [UInt8: (value: UInt16, always: Bool)] = [:]
     private var lastWritten: [UInt8: UInt16] = [:]
+    private var isRetired = false
 
-    init(service: UnsafeMutableRawPointer, label: String) {
+    /// - Parameter monitorKey: Identifies the monitor (its settings key), so every connection to
+    ///   it shares one queue.
+    init(service: UnsafeMutableRawPointer, monitorKey: String) {
         self.service = service
-        self.queue = DispatchQueue(label: "EchoVela.DDC.\(label)", qos: .userInitiated)
+        self.queue = DDCQueues.queue(for: monitorKey)
     }
 
     deinit {
         SystemDisplayFunctions.releaseAVService(service)
     }
 
-    /// Sends a value soon; returns immediately.
-    func submit(_ control: DDCControl, value: UInt16) {
+    /// Sends a value soon; returns immediately. Brightness skips a value the monitor already has
+    /// (a fade sends many); with `always`, the value is sent even if it looks unchanged, because
+    /// the monitor may have changed it itself (its own buttons, or a reset in standby).
+    func submit(_ control: DDCControl, value: UInt16, always: Bool = false) {
         lock.lock()
-        pendingWrites[control.rawValue] = value
+        let wasAlways = pendingWrites[control.rawValue]?.always ?? false
+        pendingWrites[control.rawValue] = (value, always || wasAlways)
         lock.unlock()
         queue.async { [self] in
             drainWrites()
@@ -40,22 +47,29 @@ final class DDCConnection: @unchecked Sendable {
         }
     }
 
-    /// Forgets what was last written, so the next value is sent even if it looks unchanged
-    /// (after the Mac wakes, the monitor may have reset itself).
-    func forgetLastWritten() {
+    /// Stops this connection: a newer one to the same monitor replaces it. Questions still waiting
+    /// on the queue return at once instead of taking the monitor's time.
+    func retire() {
         lock.lock()
-        lastWritten.removeAll()
+        isRetired = true
+        pendingWrites.removeAll()
         lock.unlock()
     }
 
     // MARK: On the queue
+
+    private var retired: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return isRetired
+    }
 
     private func nextPendingWrite() -> (control: UInt8, value: UInt16, alreadySent: Bool)? {
         lock.lock()
         defer { lock.unlock() }
         guard let entry = pendingWrites.first else { return nil }
         pendingWrites[entry.key] = nil
-        return (entry.key, entry.value, lastWritten[entry.key] == entry.value)
+        return (entry.key, entry.value.value, !entry.value.always && lastWritten[entry.key] == entry.value.value)
     }
 
     private func markWritten(_ control: UInt8, value: UInt16) {
@@ -86,6 +100,7 @@ final class DDCConnection: @unchecked Sendable {
     private func performWrite(control: UInt8, value: UInt16) -> Bool {
         let message = DDCMessage.setRequest(control: control, value: value)
         for _ in 0 ..< 3 {
+            if retired { return false }
             if send(message) { return true }
             usleep(20_000)
         }
@@ -95,10 +110,11 @@ final class DDCConnection: @unchecked Sendable {
     private func performRead(_ control: UInt8) -> DDCReading? {
         for request in [DDCMessage.getRequest(control: control), DDCMessage.lenientGetRequest(control: control)] {
             for _ in 0 ..< 3 {
+                if retired { return nil }
                 if send(request) {
                     usleep(50_000)
                     if let reply = SystemDisplayFunctions.read(count: DDCMessage.replyLength, from: service, address: DDCMessage.displayAddress),
-                       let reading = DDCMessage.parseReply(reply) {
+                       let reading = DDCMessage.parseReply(reply, for: control) {
                         return reading
                     }
                 }
@@ -106,6 +122,27 @@ final class DDCConnection: @unchecked Sendable {
             }
         }
         return nil
+    }
+}
+
+/// One serial queue per monitor, kept for as long as EchoVela runs (a few monitors at most).
+private enum DDCQueues {
+    private final class Store: @unchecked Sendable {
+        let lock = NSLock()
+        var queues: [String: DispatchQueue] = [:]
+    }
+
+    private static let store = Store()
+
+    static func queue(for monitorKey: String) -> DispatchQueue {
+        store.lock.lock()
+        defer { store.lock.unlock() }
+        if let queue = store.queues[monitorKey] {
+            return queue
+        }
+        let queue = DispatchQueue(label: "EchoVela.DDC.\(store.queues.count)", qos: .userInitiated)
+        store.queues[monitorKey] = queue
+        return queue
     }
 }
 
